@@ -74,6 +74,10 @@ type Session struct {
 	shutdownErr  error
 	shutdownCh   chan struct{}
 	shutdownLock sync.Mutex
+
+	// newConnCh is used to wait if conn in this session
+	// is replaced to a valid one
+	newConnCh chan net.Conn
 }
 
 // sendReady is used to either mark a stream as ready
@@ -104,17 +108,21 @@ func newSession(config *Config, conn io.ReadWriteCloser, client bool) *Session {
 		sendCh:     make(chan sendReady, 64),
 		recvDoneCh: make(chan struct{}),
 		shutdownCh: make(chan struct{}),
+		newConnCh:  make(chan net.Conn),
 	}
 	if client {
 		s.nextStreamID = 1
 	} else {
 		s.nextStreamID = 2
 	}
-	go s.recv()
-	go s.send()
-	if config.EnableKeepAlive {
-		go s.keepalive()
-	}
+
+	// go s.recv()
+	// go s.send()
+	// if config.EnableKeepAlive {
+	// 	go s.keepalive()
+	// }
+	go s.handleWithRecover(config.EnableKeepAlive)
+
 	return s
 }
 
@@ -233,6 +241,7 @@ func (s *Session) Close() error {
 	if s.shutdownErr == nil {
 		s.shutdownErr = ErrSessionShutdown
 	}
+	close(s.newConnCh)
 	close(s.shutdownCh)
 	s.conn.Close()
 	<-s.recvDoneCh
