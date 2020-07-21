@@ -78,6 +78,13 @@ type Session struct {
 	// newConnCh is used to wait if conn in this session
 	// is replaced to a valid one
 	newConnCh chan net.Conn
+
+	// meta can store some of information that
+	// used with this session
+	meta     []byte
+	metaLock sync.RWMutex
+
+	exitCh chan bool
 }
 
 // sendReady is used to either mark a stream as ready
@@ -109,6 +116,7 @@ func newSession(config *Config, conn io.ReadWriteCloser, client bool) *Session {
 		recvDoneCh: make(chan struct{}),
 		shutdownCh: make(chan struct{}),
 		newConnCh:  make(chan net.Conn),
+		exitCh:     make(chan bool, 2),
 	}
 	if client {
 		s.nextStreamID = 1
@@ -467,6 +475,8 @@ func (s *Session) recvLoop() error {
 		if _, err := io.ReadFull(s.bufRead, hdr); err != nil {
 			if err != io.EOF && !strings.Contains(err.Error(), "closed") && !strings.Contains(err.Error(), "reset by peer") {
 				s.logger.Printf("[ERR] yamux: Failed to read header: %v", err)
+			} else {
+				err = nil
 			}
 			return err
 		}
