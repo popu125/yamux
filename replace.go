@@ -180,7 +180,6 @@ func (s *Session) ReplaceConn(conn net.Conn) {
 		return
 	}
 	s.newConnCh <- conn
-	time.Sleep(5 * time.Second)
 }
 
 func (s *Session) SaveMeta(info []byte) {
