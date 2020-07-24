@@ -1,7 +1,9 @@
 package yamux
 
 import (
+	"bufio"
 	"context"
+	"fmt"
 	"io"
 	"net"
 	"strings"
@@ -20,10 +22,13 @@ func (s *Session) handleWithRecover(keepalive bool) {
 		if keepalive {
 			go s.waitToDie(keepaliveFn, ctx, &wg)
 		}
+
 		expected := <-s.exitCh
 		cancelFn()
+		close(s.disconnectCh)
 		retried += 1
-		// wg.Wait()
+		wg.Wait()
+
 		if expected || retried >= 3 {
 			return
 		}
@@ -43,6 +48,8 @@ func (s *Session) handleWithRecover(keepalive bool) {
 				return
 			}
 			s.conn = c
+			s.bufRead = bufio.NewReader(c)
+			s.disconnectCh = make(chan struct{})
 			retried = 0
 			continue
 		case <-timeout.C:
@@ -54,6 +61,8 @@ func (s *Session) handleWithRecover(keepalive bool) {
 }
 
 func recv(s *Session, ctx context.Context) error {
+	bufRead := s.bufRead
+
 	hdr := header(make([]byte, headerSize))
 	for {
 		select {
@@ -62,7 +71,7 @@ func recv(s *Session, ctx context.Context) error {
 		default:
 		}
 		// Read the header
-		if _, err := io.ReadFull(s.bufRead, hdr); err != nil {
+		if _, err := io.ReadFull(bufRead, hdr); err != nil {
 			if err != io.EOF && !strings.Contains(err.Error(), "closed") && !strings.Contains(err.Error(), "reset by peer") {
 				s.logger.Printf("[ERR] yamux: Failed to read header: %v", err)
 			}
@@ -88,14 +97,16 @@ func recv(s *Session, ctx context.Context) error {
 }
 
 func send(s *Session, ctx context.Context) error {
+	sendCh := s.sendCh
+	conn := s.conn
 	for {
 		select {
-		case ready := <-s.sendCh:
+		case ready := <-sendCh:
 			// Send a header if ready
 			if ready.Hdr != nil {
 				sent := 0
 				for sent < len(ready.Hdr) {
-					n, err := s.conn.Write(ready.Hdr[sent:])
+					n, err := conn.Write(ready.Hdr[sent:])
 					if err != nil {
 						s.logger.Printf("[ERR] yamux: Failed to write header: %v", err)
 						asyncSendErr(ready.Err, err)
@@ -153,9 +164,14 @@ func (s *Session) waitToDie(fn func(s *Session, ctx context.Context) error, ctx 
 	if err := fn(s, ctx); err == nil {
 		s.exitCh <- true
 	} else {
+		fmt.Println("session Error: ", err.Error())
 		s.exitCh <- false
 	}
 	wg.Done()
+}
+
+func (s *Session) DisconnectChan() <-chan struct{} {
+	return s.disconnectCh
 }
 
 func (s *Session) ReplaceConn(conn net.Conn) {
@@ -164,6 +180,7 @@ func (s *Session) ReplaceConn(conn net.Conn) {
 		return
 	}
 	s.newConnCh <- conn
+	time.Sleep(5 * time.Second)
 }
 
 func (s *Session) SaveMeta(info []byte) {

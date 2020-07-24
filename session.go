@@ -8,6 +8,7 @@ import (
 	"log"
 	"math"
 	"net"
+	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -84,7 +85,8 @@ type Session struct {
 	meta     []byte
 	metaLock sync.RWMutex
 
-	exitCh chan bool
+	exitCh       chan bool
+	disconnectCh chan struct{}
 }
 
 // sendReady is used to either mark a stream as ready
@@ -98,6 +100,7 @@ type sendReady struct {
 // newSession is used to construct a new session
 func newSession(config *Config, conn io.ReadWriteCloser, client bool, recover bool) *Session {
 	logger := config.Logger
+	config.LogOutput = os.Stderr
 	if logger == nil {
 		logger = log.New(config.LogOutput, "", log.LstdFlags)
 	}
@@ -115,8 +118,10 @@ func newSession(config *Config, conn io.ReadWriteCloser, client bool, recover bo
 		sendCh:     make(chan sendReady, 64),
 		recvDoneCh: make(chan struct{}),
 		shutdownCh: make(chan struct{}),
-		newConnCh:  make(chan net.Conn),
-		exitCh:     make(chan bool, 3),
+
+		newConnCh:    make(chan net.Conn),
+		exitCh:       make(chan bool, 3),
+		disconnectCh: make(chan struct{}),
 	}
 	if client {
 		s.nextStreamID = 1
