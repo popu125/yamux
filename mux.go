@@ -38,6 +38,8 @@ type Config struct {
 	// Logger is used to pass in the logger to be used. Either Logger or
 	// LogOutput can be set, not both.
 	Logger *log.Logger
+
+	WithRecover bool
 }
 
 // DefaultConfig is used to return a default configuration
@@ -49,6 +51,7 @@ func DefaultConfig() *Config {
 		ConnectionWriteTimeout: 10 * time.Second,
 		MaxStreamWindowSize:    initialStreamWindow,
 		LogOutput:              os.Stderr,
+		WithRecover:            false,
 	}
 }
 
@@ -81,7 +84,7 @@ func Server(conn io.ReadWriteCloser, config *Config) (*Session, error) {
 	if err := VerifyConfig(config); err != nil {
 		return nil, err
 	}
-	return newSession(config, conn, false), nil
+	return newSession(config, conn, false, config.WithRecover), nil
 }
 
 // Client is used to initialize a new client-side connection.
@@ -94,5 +97,5 @@ func Client(conn io.ReadWriteCloser, config *Config) (*Session, error) {
 	if err := VerifyConfig(config); err != nil {
 		return nil, err
 	}
-	return newSession(config, conn, true), nil
+	return newSession(config, conn, true, config.WithRecover), nil
 }

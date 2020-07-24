@@ -10,8 +10,10 @@ import (
 )
 
 func (s *Session) handleWithRecover(keepalive bool) {
+	var retried int = 0
 	for {
 		var wg sync.WaitGroup
+		s.exitCh = make(chan bool, 3)
 		ctx, cancelFn := context.WithCancel(context.Background())
 		go s.waitToDie(recv, ctx, &wg)
 		go s.waitToDie(send, ctx, &wg)
@@ -20,12 +22,17 @@ func (s *Session) handleWithRecover(keepalive bool) {
 		}
 		expected := <-s.exitCh
 		cancelFn()
-		wg.Wait()
-		if expected {
+		retried += 1
+		// wg.Wait()
+		if expected || retried >= 3 {
 			return
 		}
 
-		timeout := time.NewTimer(20 * time.Second)
+		timeout := time.NewTimer(30 * time.Second)
+		defer func() {
+			s.Close()
+			s.conn.Close()
+		}()
 		// Once reach here, the recv and send has dead,
 		// wait to recover them
 		// WARNING: There may be race if Ping() called close
@@ -36,6 +43,7 @@ func (s *Session) handleWithRecover(keepalive bool) {
 				return
 			}
 			s.conn = c
+			retried = 0
 			continue
 		case <-timeout.C:
 			return
@@ -57,8 +65,6 @@ func recv(s *Session, ctx context.Context) error {
 		if _, err := io.ReadFull(s.bufRead, hdr); err != nil {
 			if err != io.EOF && !strings.Contains(err.Error(), "closed") && !strings.Contains(err.Error(), "reset by peer") {
 				s.logger.Printf("[ERR] yamux: Failed to read header: %v", err)
-			} else {
-				err = nil
 			}
 			return err
 		}
@@ -153,6 +159,10 @@ func (s *Session) waitToDie(fn func(s *Session, ctx context.Context) error, ctx 
 }
 
 func (s *Session) ReplaceConn(conn net.Conn) {
+	s.exitCh <- false
+	if s.IsClosed() {
+		return
+	}
 	s.newConnCh <- conn
 }
 

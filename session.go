@@ -96,7 +96,7 @@ type sendReady struct {
 }
 
 // newSession is used to construct a new session
-func newSession(config *Config, conn io.ReadWriteCloser, client bool) *Session {
+func newSession(config *Config, conn io.ReadWriteCloser, client bool, recover bool) *Session {
 	logger := config.Logger
 	if logger == nil {
 		logger = log.New(config.LogOutput, "", log.LstdFlags)
@@ -116,7 +116,7 @@ func newSession(config *Config, conn io.ReadWriteCloser, client bool) *Session {
 		recvDoneCh: make(chan struct{}),
 		shutdownCh: make(chan struct{}),
 		newConnCh:  make(chan net.Conn),
-		exitCh:     make(chan bool, 2),
+		exitCh:     make(chan bool, 3),
 	}
 	if client {
 		s.nextStreamID = 1
@@ -124,12 +124,15 @@ func newSession(config *Config, conn io.ReadWriteCloser, client bool) *Session {
 		s.nextStreamID = 2
 	}
 
-	// go s.recv()
-	// go s.send()
-	// if config.EnableKeepAlive {
-	// 	go s.keepalive()
-	// }
-	go s.handleWithRecover(config.EnableKeepAlive)
+	if recover {
+		go s.handleWithRecover(config.EnableKeepAlive)
+	} else {
+		go s.recv()
+		go s.send()
+		if config.EnableKeepAlive {
+			go s.keepalive()
+		}
+	}
 
 	return s
 }
