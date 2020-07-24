@@ -3,7 +3,6 @@ package yamux
 import (
 	"bufio"
 	"context"
-	"fmt"
 	"io"
 	"net"
 	"strings"
@@ -164,7 +163,6 @@ func (s *Session) waitToDie(fn func(s *Session, ctx context.Context) error, ctx 
 	if err := fn(s, ctx); err == nil {
 		s.exitCh <- true
 	} else {
-		fmt.Println("session Error: ", err.Error())
 		s.exitCh <- false
 	}
 	wg.Done()

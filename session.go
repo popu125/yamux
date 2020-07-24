@@ -8,7 +8,6 @@ import (
 	"log"
 	"math"
 	"net"
-	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -100,7 +99,6 @@ type sendReady struct {
 // newSession is used to construct a new session
 func newSession(config *Config, conn io.ReadWriteCloser, client bool, recover bool) *Session {
 	logger := config.Logger
-	config.LogOutput = os.Stderr
 	if logger == nil {
 		logger = log.New(config.LogOutput, "", log.LstdFlags)
 	}
