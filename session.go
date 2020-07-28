@@ -8,7 +8,6 @@ import (
 	"log"
 	"math"
 	"net"
-	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
