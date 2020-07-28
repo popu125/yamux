@@ -8,6 +8,7 @@ import (
 	"log"
 	"math"
 	"net"
+	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -255,10 +256,10 @@ func (s *Session) Close() error {
 	if s.shutdownErr == nil {
 		s.shutdownErr = ErrSessionShutdown
 	}
-	close(s.newConnCh)
 	close(s.shutdownCh)
 	s.conn.Close()
 	<-s.recvDoneCh
+	close(s.newConnCh)
 
 	s.streamLock.Lock()
 	defer s.streamLock.Unlock()

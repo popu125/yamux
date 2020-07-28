@@ -11,6 +11,7 @@ import (
 )
 
 func (s *Session) handleWithRecover(keepalive bool) {
+	defer close(s.recvDoneCh)
 	var retried int = 0
 	for {
 		var wg sync.WaitGroup
@@ -173,6 +174,7 @@ func (s *Session) DisconnectChan() <-chan struct{} {
 }
 
 func (s *Session) ReplaceConn(conn net.Conn) {
+	defer recover() // Prevent panic if newConnCh is closed
 	s.exitCh <- false
 	if s.IsClosed() {
 		return
