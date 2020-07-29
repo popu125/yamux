@@ -174,7 +174,9 @@ func (s *Session) DisconnectChan() <-chan struct{} {
 }
 
 func (s *Session) ReplaceConn(conn net.Conn) {
-	defer recover() // Prevent panic if newConnCh is closed
+	defer func() {
+		recover()
+	}() // Prevent panic if newConnCh is closed
 	s.exitCh <- false
 	if s.IsClosed() {
 		return
