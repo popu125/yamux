@@ -84,7 +84,7 @@ func Server(conn io.ReadWriteCloser, config *Config) (*Session, error) {
 	if err := VerifyConfig(config); err != nil {
 		return nil, err
 	}
-	return newSession(config, conn, false, config.WithRecover), nil
+	return newSession(config, conn, false, config.WithRecover)
 }
 
 // Client is used to initialize a new client-side connection.
@@ -97,5 +97,5 @@ func Client(conn io.ReadWriteCloser, config *Config) (*Session, error) {
 	if err := VerifyConfig(config); err != nil {
 		return nil, err
 	}
-	return newSession(config, conn, true, config.WithRecover), nil
+	return newSession(config, conn, true, config.WithRecover)
 }

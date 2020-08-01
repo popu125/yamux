@@ -2,6 +2,7 @@ package yamux
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -97,10 +98,15 @@ type sendReady struct {
 }
 
 // newSession is used to construct a new session
-func newSession(config *Config, conn io.ReadWriteCloser, client bool, recover bool) *Session {
+func newSession(config *Config, conn io.ReadWriteCloser, client bool, recover bool) (*Session, error) {
 	logger := config.Logger
 	if logger == nil {
 		logger = log.New(config.LogOutput, "", log.LstdFlags)
+	}
+
+	// Check conn before init
+	if conn == nil {
+		return nil, errors.New("conn is nil")
 	}
 
 	s := &Session{
@@ -137,7 +143,7 @@ func newSession(config *Config, conn io.ReadWriteCloser, client bool, recover bo
 		}
 	}
 
-	return s
+	return s, nil
 }
 
 // IsClosed does a safe check to see if we have shutdown
