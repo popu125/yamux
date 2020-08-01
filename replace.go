@@ -11,9 +11,9 @@ import (
 )
 
 func (s *Session) handleWithRecover(keepalive bool) {
-	defer close(s.recvDoneCh)
 	var retried int = 0
 	defer func() {
+		close(s.recvDoneCh)
 		s.Close()
 		s.conn.Close()
 	}()
