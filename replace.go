@@ -13,6 +13,11 @@ import (
 func (s *Session) handleWithRecover(keepalive bool) {
 	defer close(s.recvDoneCh)
 	var retried int = 0
+	defer func() {
+		s.Close()
+		s.conn.Close()
+	}()
+
 	for {
 		var wg sync.WaitGroup
 		s.exitCh = make(chan bool, 3)
@@ -34,10 +39,7 @@ func (s *Session) handleWithRecover(keepalive bool) {
 		}
 
 		timeout := time.NewTimer(30 * time.Second)
-		defer func() {
-			s.Close()
-			s.conn.Close()
-		}()
+
 		// Once reach here, the recv and send has dead,
 		// wait to recover them
 		// WARNING: There may be race if Ping() called close
