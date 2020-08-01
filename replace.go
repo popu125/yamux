@@ -160,9 +160,10 @@ func keepaliveFn(s *Session, ctx context.Context) error {
 
 func (s *Session) waitToDie(fn func(s *Session, ctx context.Context) error, ctx context.Context, wg *sync.WaitGroup) {
 	defer func() {
-		recover()
-		s.exitCh <- true
-		wg.Done()
+		if e := recover(); e != nil {
+			s.exitCh <- true
+			wg.Done()
+		}
 	}()
 
 	wg.Add(1)
