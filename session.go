@@ -459,7 +459,7 @@ func (s *Session) send() {
 func (s *Session) recv() {
 	defer func() {
 		if e := recover(); e != nil {
-			s.exitErr(fmt.Errorf("%v", e))
+			fmt.Printf("recv error: %v\n", e)
 		}
 	}()
 
