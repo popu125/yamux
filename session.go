@@ -457,6 +457,12 @@ func (s *Session) send() {
 
 // recv is a long running goroutine that accepts new data
 func (s *Session) recv() {
+	defer func() {
+		if e := recover(); e != nil {
+			s.exitErr(fmt.Errorf("%v", e))
+		}
+	}()
+
 	if err := s.recvLoop(); err != nil {
 		s.exitErr(err)
 	}
