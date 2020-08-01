@@ -161,21 +161,20 @@ func keepaliveFn(s *Session, ctx context.Context) error {
 }
 
 func (s *Session) waitToDie(fn func(s *Session, ctx context.Context) error, ctx context.Context, wg *sync.WaitGroup) {
+	wg.Add(1)
 	defer func() {
+		wg.Done()
 		if e := recover(); e != nil {
 			s.exitCh <- true
-			wg.Done()
 		}
 	}()
 
-	wg.Add(1)
 	// return nil:should wait recover, error:should stop
 	if err := fn(s, ctx); err == nil {
 		s.exitCh <- true
 	} else {
 		s.exitCh <- false
 	}
-	wg.Done()
 }
 
 func (s *Session) DisconnectChan() <-chan struct{} {
