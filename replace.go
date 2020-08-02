@@ -3,6 +3,7 @@ package yamux
 import (
 	"bufio"
 	"context"
+	"fmt"
 	"io"
 	"net"
 	"strings"
@@ -11,6 +12,12 @@ import (
 )
 
 func (s *Session) handleWithRecover(keepalive bool) {
+	defer func() {
+		if e := recover(); e != nil {
+			fmt.Printf("handleWithRecover panic: %v", e)
+		}
+	}()
+
 	var retried int = 0
 	defer func() {
 		close(s.recvDoneCh)
