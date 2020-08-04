@@ -29,9 +29,12 @@ func (s *Session) handleWithRecover(keepalive bool) {
 		var wg sync.WaitGroup
 		s.exitCh = make(chan bool, 3)
 		ctx, cancelFn := context.WithCancel(context.Background())
+
+		wg.Add(2)
 		go s.waitToDie(recv, ctx, &wg)
 		go s.waitToDie(send, ctx, &wg)
 		if keepalive {
+			wg.Add(1)
 			go s.waitToDie(keepaliveFn, ctx, &wg)
 		}
 
@@ -168,7 +171,6 @@ func keepaliveFn(s *Session, ctx context.Context) error {
 }
 
 func (s *Session) waitToDie(fn func(s *Session, ctx context.Context) error, ctx context.Context, wg *sync.WaitGroup) {
-	wg.Add(1)
 	defer func() {
 		wg.Done()
 		if e := recover(); e != nil {
