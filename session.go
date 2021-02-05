@@ -9,7 +9,6 @@ import (
 	"log"
 	"math"
 	"net"
-	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -107,7 +106,7 @@ func newSession(config *Config, conn io.ReadWriteCloser, client bool, recover bo
 	if logger == nil {
 		logger = log.New(config.LogOutput, "", log.LstdFlags)
 	}
-	logger = log.New(os.Stdout, "", log.LstdFlags)
+	// logger = log.New(os.Stdout, "", log.LstdFlags)
 
 	// Check conn before init
 	if conn == nil {
