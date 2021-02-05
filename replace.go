@@ -48,7 +48,10 @@ func (s *Session) handleWithRecover(keepalive bool) {
 			return
 		}
 
-		timeout := time.NewTimer(30 * time.Second)
+		if s.wait <= 0 {
+			return
+		}
+		timeout := time.NewTimer(s.wait)
 
 		// Once reach here, the recv and send has dead,
 		// wait to recover them
@@ -59,7 +62,9 @@ func (s *Session) handleWithRecover(keepalive bool) {
 			if !ok {
 				return
 			}
+			// todo:lock
 			s.conn = c
+			// todo:save bufread state
 			s.bufRead = bufio.NewReader(c)
 			s.disconnectCh = make(chan struct{})
 			retried = 0
@@ -211,4 +216,8 @@ func (s *Session) LoadMeta() []byte {
 	s.metaLock.RLock()
 	defer s.metaLock.RUnlock()
 	return s.meta
+}
+
+func (s *Session) SetWait(du time.Duration) {
+	s.wait = du
 }

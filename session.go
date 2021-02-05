@@ -9,6 +9,7 @@ import (
 	"log"
 	"math"
 	"net"
+	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -85,6 +86,9 @@ type Session struct {
 	meta     []byte
 	metaLock sync.RWMutex
 
+	// wait is time that wait for reconnect, set to 0 if no wait
+	wait time.Duration
+
 	exitCh       chan bool
 	disconnectCh chan struct{}
 }
@@ -103,6 +107,7 @@ func newSession(config *Config, conn io.ReadWriteCloser, client bool, recover bo
 	if logger == nil {
 		logger = log.New(config.LogOutput, "", log.LstdFlags)
 	}
+	logger = log.New(os.Stdout, "", log.LstdFlags)
 
 	// Check conn before init
 	if conn == nil {
@@ -122,6 +127,7 @@ func newSession(config *Config, conn io.ReadWriteCloser, client bool, recover bo
 		sendCh:     make(chan sendReady, 64),
 		recvDoneCh: make(chan struct{}),
 		shutdownCh: make(chan struct{}),
+		wait:       0,
 
 		newConnCh:    make(chan net.Conn),
 		exitCh:       make(chan bool, 3),
