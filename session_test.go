@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net"
 	"reflect"
 	"runtime"
 	"strings"
@@ -763,8 +764,26 @@ func TestReadDeadline(t *testing.T) {
 	}
 
 	buf := make([]byte, 4)
-	if _, err := stream.Read(buf); err != ErrTimeout {
+	_, err = stream.Read(buf)
+	if err != ErrTimeout {
 		t.Fatalf("err: %v", err)
+	}
+
+	// See https://github.com/hashicorp/yamux/issues/90
+	// The standard library's http server package will read from connections in
+	// the background to detect if they are alive.
+	//
+	// It sets a read deadline on connections and detect if the returned error
+	// is a network timeout error which implements net.Error.
+	//
+	// The HTTP server will cancel all server requests if it isn't timeout error
+	// from the connection.
+	//
+	// We assert that we return an error meeting the interface to avoid
+	// accidently breaking yamux session compatability with the standard
+	// library's http server implementation.
+	if netErr, ok := err.(net.Error); !ok || !netErr.Timeout() {
+		t.Fatalf("reading timeout error is expected to implement net.Error and return true when calling Timeout()")
 	}
 }
 
